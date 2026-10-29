@@ -1,15 +1,371 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="scroll-smooth bg-[#000000] text-white">
 <head>
-<meta charset="UTF-8">
-<title>SciBridge | リスク・サイエンス・コミュニケーション</title>
-<style>
-  body { background-color: #000000; color: #ffffff; font-family: sans-serif; text-align: center; padding-top: 20%; }
-  h1 { font-size: 3rem; letter-spacing: 0.2em; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サイバー防衛 × 科学コミュニケーション | DOMINATE</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Noto Sans JP"', '"Inter"', 'sans-serif'] },
+                    colors: {
+                        black: '#000000',
+                        cyan: '#00f3ff',
+                        crimson: '#ff003c',
+                        dark: '#0a0a0a'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow-x: hidden; cursor: none; background: #000000; }
+        
+        /* Custom Cursor */
+        .cursor-dot, .cursor-outline {
+            position: fixed; top: 0; left: 0; transform: translate(-50%, -50%);
+            border-radius: 50%; z-index: 99999; pointer-events: none;
+        }
+        .cursor-dot { width: 8px; height: 8px; background: #00f3ff; box-shadow: 0 0 10px #00f3ff; }
+        .cursor-outline {
+            width: 40px; height: 40px; border: 1px solid rgba(0, 243, 255, 0.5);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+        .cursor-hover .cursor-outline {
+            width: 80px; height: 80px; background-color: rgba(0, 243, 255, 0.1); border-color: transparent;
+        }
+
+        /* Terminal Loader */
+        #loader {
+            position: fixed; inset: 0; background: #000000; z-index: 99990;
+            display: flex; flex-direction: column; justify-content: flex-end; padding: 40px;
+            font-family: monospace; font-size: 14px; color: #00f3ff;
+        }
+        .loader-text { text-shadow: 0 0 5px #00f3ff; margin: 2px 0; opacity: 0.8; }
+
+        /* Glitch Effect */
+        .glitch {
+            position: relative; color: white; display: inline-block;
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000; overflow: hidden;
+        }
+        .glitch::before {
+            left: 3px; text-shadow: -2px 0 #ff003c;
+            animation: glitch-anim-1 2s infinite linear alternate-reverse;
+        }
+        .glitch::after {
+            left: -3px; text-shadow: -2px 0 #00f3ff;
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(20% 0 80% 0); }
+            20% { clip-path: inset(60% 0 10% 0); }
+            40% { clip-path: inset(40% 0 50% 0); }
+            60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(10% 0 70% 0); }
+            100% { clip-path: inset(30% 0 50% 0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(10% 0 60% 0); }
+            20% { clip-path: inset(30% 0 20% 0); }
+            40% { clip-path: inset(70% 0 10% 0); }
+            60% { clip-path: inset(20% 0 50% 0); }
+            80% { clip-path: inset(90% 0 5% 0); }
+            100% { clip-path: inset(50% 0 30% 0); }
+        }
+
+        /* Glass & Neon Cards */
+        .glass-card {
+            background: rgba(10, 10, 10, 0.6); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative; overflow: hidden;
+        }
+        .glass-card::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, transparent 100%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .glass-card:hover::before { opacity: 1; }
+        
+        .border-neon-cyan { border: 1px solid #00f3ff; box-shadow: 0 0 15px rgba(0,243,255,0.2), inset 0 0 15px rgba(0,243,255,0.1); }
+        .border-neon-crimson { border: 1px solid #ff003c; box-shadow: 0 0 15px rgba(255,0,60,0.2), inset 0 0 15px rgba(255,0,60,0.1); }
+
+        /* Canvas */
+        #hero-canvas { position: absolute; inset: 0; z-index: 0; opacity: 0.6; }
+
+        /* GSAP Panels */
+        .pin-panel { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 5vw; opacity: 0; visibility: hidden; }
+        .pin-panel.active { opacity: 1; visibility: visible; }
+    </style>
 </head>
 <body>
-  <h1>SciBridge</h1>
-  <p>サイバー防衛 × 科学コミュニケーション</p>
+
+    <!-- Terminal Loader -->
+    <div id="loader">
+        <div id="loader-content"></div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-outline" id="cursor-outline"></div>
+
+    <!-- Hero Section -->
+    <section class="relative w-full h-screen flex items-center justify-center overflow-hidden">
+        <canvas id="hero-canvas"></canvas>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/50 to-black z-0"></div>
+        
+        <div class="relative z-10 text-center px-4 w-full max-w-7xl mx-auto">
+            <h1 class="text-5xl md:text-8xl font-black mb-8 tracking-tighter leading-tight glitch" data-text="我々は、最強の盾であり、最鋭の矛である。">
+                我々は、最強の盾であり、<br>最鋭の矛である。
+            </h1>
+            <p class="text-xl md:text-2xl text-cyan font-bold tracking-widest uppercase mt-6 opacity-0" id="hero-sub">
+                The Ultimate Shield. The Sharpest Spear.
+            </p>
+        </div>
+        
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 text-white/50 text-xs tracking-[0.3em] uppercase flex flex-col items-center gap-2 z-10">
+            <span>Scroll to Initialize</span>
+            <div class="w-[1px] h-12 bg-gradient-to-b from-cyan to-transparent animate-pulse"></div>
+        </div>
+    </section>
+
+    <!-- GSAP Pinned Story Section -->
+    <section id="story-container" class="relative w-full h-screen bg-black overflow-hidden">
+        
+        <!-- Panel 1: Threat (Crimson) -->
+        <div class="pin-panel" id="panel-1">
+            <div class="max-w-6xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <span class="text-crimson font-bold tracking-[0.3em] text-sm uppercase mb-4 block">01 / The Threat</span>
+                    <h2 class="text-4xl md:text-6xl font-black leading-tight mb-8">
+                        情報漏洩の真の恐怖は、<br>
+                        システムの停止ではない。
+                    </h2>
+                    <p class="text-xl text-gray-400 font-light leading-relaxed">
+                        無知が引き起こす、<span class="text-crimson font-bold border-b border-crimson pb-1">株価100億円の暴落</span>だ。<br>
+                        技術者の難解な説明が、市場のパニックと顧客離れを加速させる。
+                    </p>
+                </div>
+                <div class="relative h-64 border-l-2 border-crimson pl-8 flex flex-col justify-center">
+                    <div class="absolute -left-[5px] top-1/2 w-2 h-2 bg-crimson shadow-[0_0_10px_#ff003c]"></div>
+                    <div class="text-6xl font-black text-transparent" style="-webkit-text-stroke: 1px #ff003c;">LOSS: ¥10,000,000,000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Solution (Cyan) -->
+        <div class="pin-panel" id="panel-2">
+            <div class="max-w-6xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
+                <div class="order-2 md:order-1 relative h-64 border-r-2 border-cyan pr-8 flex flex-col justify-center text-right">
+                    <div class="absolute -right-[5px] top-1/2 w-2 h-2 bg-cyan shadow-[0_0_10px_#00f3ff]"></div>
+                    <div class="text-6xl font-black text-transparent" style="-webkit-text-stroke: 1px #00f3ff;">TRANSLATE.</div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <span class="text-cyan font-bold tracking-[0.3em] text-sm uppercase mb-4 block">02 / The Solution</span>
+                    <h2 class="text-4xl md:text-6xl font-black leading-tight mb-8">
+                        難解な技術を、<br>
+                        市民の言葉へ『翻訳』する。
+                    </h2>
+                    <p class="text-xl text-gray-400 font-light leading-relaxed">
+                        科学コミュニケーションの力が、市場の不安を鎮圧する。<br>
+                        それが社会不安を防ぐ、<span class="text-cyan font-bold">最強の防波堤</span>となる。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Synergy Cards -->
+        <div class="pin-panel" id="panel-3">
+            <div class="max-w-7xl mx-auto w-full">
+                <div class="text-center mb-16">
+                    <span class="text-white font-bold tracking-[0.3em] text-sm uppercase mb-4 block">03 / Synergy</span>
+                    <h2 class="text-4xl md:text-6xl font-black">究極のデュアル・エンジン</h2>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Offense -->
+                    <div class="glass-card border-neon-cyan p-10 rounded-xl hover-target group">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-3xl font-black text-white group-hover:text-cyan transition-colors">平時 <span class="text-sm font-normal tracking-widest text-cyan uppercase ml-2">Normal Times</span></h3>
+                            <i class="fa-solid fa-bullhorn text-2xl text-cyan"></i>
+                        </div>
+                        <p class="text-gray-400 font-light leading-relaxed mb-6">
+                            技術PRと広告を通じて、御社のコア技術を深く学習。<br>市場を熱狂させる言葉で発信し、自社専用のAIナレッジを構築する。
+                        </p>
+                        <div class="text-cyan font-bold text-sm tracking-widest">>> TECH PR / ADVERTISING</div>
+                    </div>
+                    <!-- Defense -->
+                    <div class="glass-card border-neon-crimson p-10 rounded-xl hover-target group">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-3xl font-black text-white group-hover:text-crimson transition-colors">有事 <span class="text-sm font-normal tracking-widest text-crimson uppercase ml-2">Crisis</span></h3>
+                            <i class="fa-solid fa-shield-virus text-2xl text-crimson"></i>
+                        </div>
+                        <p class="text-gray-400 font-light leading-relaxed mb-6">
+                            技術を事前学習しているからこそ可能な、発災後0秒の初動対応。<br>パニックを即座に鎮静化し、企業価値の崩壊を食い止める。
+                        </p>
+                        <div class="text-crimson font-bold text-sm tracking-widest">>> 0-SECOND INCIDENT RESPONSE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark py-20 border-t border-white/10 text-center">
+        <h2 class="text-4xl font-black mb-8 tracking-tighter">準備はいいか。</h2>
+        <a href="#" class="inline-block bg-white text-black px-12 py-4 font-bold text-xl hover:bg-cyan transition-colors hover-target">
+            DOMINATE NOW
+        </a>
+        <p class="mt-16 text-xs text-gray-600 tracking-widest uppercase">&copy; 2026 ScienceComm PR. The Apex.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // 1. Terminal Loader
+        const loader = document.getElementById('loader');
+        const loaderContent = document.getElementById('loader-content');
+        const bootSequence = [
+            "INITIALIZING NEURAL LINK...",
+            "BYPASSING SECURITY PROTOCOLS... [OK]",
+            "CONNECTING TO APEX SERVERS... [OK]",
+            "DECODING MARKET DATA... [100%]",
+            "LOADING COMMUNICATION MATRIX...",
+            "SYSTEM READY. DOMINATE THE MARKET."
+        ];
+        
+        let delay = 0;
+        bootSequence.forEach((text, i) => {
+            setTimeout(() => {
+                const p = document.createElement('div');
+                p.className = 'loader-text';
+                p.textContent = `> ${text}`;
+                loaderContent.appendChild(p);
+                
+                if (i === bootSequence.length - 1) {
+                    setTimeout(() => {
+                        gsap.to(loader, { yPercent: -100, duration: 1, ease: "power4.inOut" });
+                        gsap.to('#hero-sub', { opacity: 1, y: -20, duration: 1, delay: 0.5 });
+                    }, 800);
+                }
+            }, delay);
+            delay += Math.random() * 300 + 200;
+        });
+
+        // 2. Custom Cursor
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorOutline = document.getElementById('cursor-outline');
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        let outlineX = mouseX, outlineY = mouseY;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            cursorDot.style.left = `${mouseX}px`; cursorDot.style.top = `${mouseY}px`;
+        });
+
+        function animateCursor() {
+            outlineX += (mouseX - outlineX) * 0.2;
+            outlineY += (mouseY - outlineY) * 0.2;
+            cursorOutline.style.left = `${outlineX}px`;
+            cursorOutline.style.top = `${outlineY}px`;
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        document.querySelectorAll('a, .hover-target').forEach(el => {
+            el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+            el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+        });
+
+        // 3. GSAP ScrollTrigger Storytelling
+        gsap.registerPlugin(ScrollTrigger);
+        
+        const panels = gsap.utils.toArray('.pin-panel');
+        
+        // Setup initial states
+        gsap.set(panels[0], { opacity: 1, visibility: 'visible' });
+        
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#story-container",
+                pin: true,
+                start: "top top",
+                end: "+=300%",
+                scrub: 1,
+            }
+        });
+
+        // Panel 1 -> Panel 2
+        tl.to(panels[0], { opacity: 0, scale: 0.9, duration: 1 })
+          .to(panels[1], { opacity: 1, visibility: 'visible', scale: 1, duration: 1 }, "-=0.5")
+          // Panel 2 -> Panel 3
+          .to(panels[1], { opacity: 0, scale: 0.9, duration: 1 }, "+=0.5")
+          .to(panels[2], { opacity: 1, visibility: 'visible', scale: 1, duration: 1 }, "-=0.5")
+          .to({}, {duration: 0.5}); // Hold at the end
+
+        // 4. Interactive Data Grid Canvas (Hero)
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        let w, h, nodes = [];
+        
+        function initCanvas() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            nodes = [];
+            for (let i = 0; i < 100; i++) {
+                nodes.push({
+                    x: Math.random() * w, y: Math.random() * h,
+                    vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5
+                });
+            }
+        }
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, w, h);
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+            ctx.fillStyle = '#00f3ff';
+            
+            nodes.forEach(n => {
+                n.x += n.vx; n.y += n.vy;
+                if(n.x < 0 || n.x > w) n.vx *= -1;
+                if(n.y < 0 || n.y > h) n.vy *= -1;
+                
+                ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill();
+            });
+
+            for(let i = 0; i < nodes.length; i++) {
+                for(let j = i+1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if(dist < 120) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(drawCanvas);
+        }
+        drawCanvas();
+    </script>
 </body>
 </html>
